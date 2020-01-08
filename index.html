@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Ajax 延伸</title>
+    <style>
+        h2 {
+            border-top: 2px dashed darkred;
+            color: firebrick;
+            padding: 15px 0 10px;
+            margin-bottom: 0;
+        }
+
+        p {
+            width: 460px;
+            height: auto;
+            background-color: lavenderblush;
+            line-height: 20px;
+            padding: 10px 20px;
+            border: 1px solid brown;
+        }
+
+        u {
+            background-color: lavenderblush;
+            color: darkred;
+        }
+
+        b,
+        i {
+            color: rgb(100, 10, 10);
+        }
+
+        #myUl {
+            width: 460px;
+            margin: 0;
+            color: red;
+        }
+
+        #myUl>li {
+            padding: 2px;
+            color: saddlebrown;
+        }
+    </style>
+</head>
+
+<body>
+    <h2 style="border: 0;padding-top: 0;">responseType 的作用</h2>
+
+    在響應中有 response 和 responseText <br>
+    兩者在默認情況下獲取到的數據都是字符串形式 <br>
+    但是 response 可以通過 responseType 改變格式
+    <br><br>
+
+    <u>
+        //因為 response 是新出的 有兼容性問題 所以並不推薦使用
+    </u>
+
+    <p>
+        我們可以通過 xml.responseType = 'json' <br>
+        把 response 設置成 JSON 數據格式<br>
+        此時獲取到的 response 就會直接是 JSON 對象了<br>
+        * 通常設置了 responseType 後 就無法獲取 responseText 了
+    </p>
+
+    <h2>模板引擎使用案例：動態渲染數據</h2>
+
+    用 art-template 模板引擎 動態渲染數據<br>
+    在頁面中添加 li 顯示每個學生的序號、名稱、信箱
+    <br><br>
+
+    <u>
+        //建議在 script 標籤設置 type 時 設為 type="text/x-模板引擎名稱" <br>
+        //在模板中 $index 是遍歷對象的下標 $value 是遍歷到的對象
+    </u>
+
+    <p>
+        以下為使用模板引擎的固定流程：<br>
+        1. 選擇一個模板引擎 (這裡我們用 art-Template 模板引擎) <br>
+        2. 下載此模板引擎的 JS 文件<br>
+        3. 將此模板引擎引入到要使用的頁面中<br>
+        4. 用 script 標籤準備一個模板 (因為 script 標籤默認不顯示內容)<br>
+        <i>*** 此 script 標籤須設置 type 為非 text/javascript ***</i><br>
+        5. 準備好要渲染頁面的數據(要是一個 JSON 對象)<br>
+        6. 通過模板引擎提供的方法 整合數據與模板 得到一段HTML <br>
+        7. 把這段 HTML 設置為要使用的頁面元素的 innerHTML 即完成。
+    </p>
+
+    <ul id="myUl">
+        點我動態渲染數據
+    </ul>
+
+    <script id="templ" type="text/x-art-template">
+        {{each students}}
+        <li>
+            我是{{$index+1}}號，我叫{{$value.author}}，我的信箱是{{$value.email}}。
+        </li>
+    {{/each}}
+    </script>
+
+    <script src="./template-web.js"></script>
+    <script>
+        var oUl = document.getElementById('myUl')
+
+        oUl.onclick = function () {
+            var xml = new XMLHttpRequest()
+            xml.open('GET', 'test.php')
+            xml.send()
+            xml.responseType = 'json'
+            xml.onreadystatechange = function () {
+                if (this.readyState == 4) {
+                    var students = this.response.data
+                    //使用模板引擎提供的 template 方法
+                    //參數1傳入模板的 id, 參數2傳入要使用的 JSON 對象
+                    oUl.innerHTML = template('templ', {
+                        students
+                    })
+                }
+            }
+        }
+    </script>
+
+    <h2>封裝 ajax</h2>
+
+    封裝一個ajax方法 傳入四個參數即可發送 ajax 請求
+    <br><br>
+
+    <u>
+        //參數1為請求方法 參數2為請求地址 參數3為傳入參數 參數4為回調函數 <br>
+        //所有參數都為必填選項 參數3若為空則傳入 null 或 '' 空字符串
+    </u>
+
+    <p>
+        因為 ajax 請求是異步操作 所以無法在封裝中 return 響應結果 <br>
+        這時候只能利用回調函數 callback 來操作其響應結果
+    </p>
+
+    <script>
+        // M>method U>url A>arguments F>callback
+        function ajax(M, U, A, F) {
+
+            //有可能傳小寫 所以一律把它轉成大寫
+            M = M.toUpperCase()
+
+            //沒有傳A時默認A為null
+            A = A || null
+
+            var xml = new XMLHttpRequest()
+
+            //如果是GET請求且有傳入參數
+            if (M === 'GET' && A !== null) {
+                U = U + '?' + A
+            }
+
+            xml.open(M, U)
+
+            if (M === 'POST' && A !== null) {
+                xml.setRequestHeader('content-type', 'application/x-www-form-urlencoded')
+                var params = A
+            }
+
+            xml.send(params)
+
+            xml.onreadystatechange = function () {
+                if (this.readyState == 4) {
+                    F(this.responseText)
+                }
+            }
+        }
+    </script>
+
+    <h2>JQuery 中的 Ajax 方法</h2>
+
+    $.ajax(url,{settings}) 這是最基礎的 ajax 調用方式<br>
+    settings 中 常用的幾個對象有 ： <br>
+    type(請求方式)、success(成功時的回調)、data(請求時傳遞的參數) <br>
+    type 傳入大寫或小寫皆可、 success 當status為200才執行、data 傳入對象或字符串皆可
+    <br><br>
+
+    <u>
+        //JQuery 會自動根據請求地址中的 Content-Type 把響應轉換成對象<br>
+        //若是沒有設置 Content-Type 則可在 settings 中設置 dataType: 'json'
+    </u>
+
+    <p>
+        * settings 中有四個函數分別為：<br>
+        1. 在發送請求之前要執行的代碼可使用 beforeSend 函數<br>
+        2. 在不管響應是否成功都需要執行的代碼可使用 complete 函數<br>
+        3. 在狀態碼為 200 的時候要執行的代碼可使用 success 函數<br>
+        4. 在狀態碼不為 200 的時候要執行的代碼可使用 error 函數
+    </p>
+
+    <h2>JQuery 中的快捷用法</h2>
+
+    快捷方法常用的有三種 $.get、$.post、$.getJSON <br>
+    可根據請求方式與響應的數據格式選擇使用<br>
+    使用時 參數1為請求地址 參數2為傳遞參數 參數3為成功函數
+    <br><br>
+
+    <u>
+        //當請求文件沒有設置 Content-Type 默認返回的數據格式為字符串 <br>
+        //若希望返回 JSON 對象 即可使用 $.getJSON 方法
+    </u>
+
+    <p>
+        $.get('test.php', 'id=1', function (res) { <br>
+            console.log(res) <i>這裡返回的是根據 Content-Type 的數據</i><br>
+        }) <br>
+        $.post('login.php', { id: 1 , name: 'admin' }, function (res) { <br>
+            console.log(res) <i>這裡返回的是根據 Content-Type 的數據</i><br>
+        }) <br>
+        $.getJSON('test.php', 'id=1', function (res) { <br>
+            console.log(res) <i>這裡返回的是 JSON 對象形式的數據</i><br>
+        }) <br>
+    </p>
+
+    <h2>JQuery 中 Ajax 的全局事件</h2>
+
+    假設你有很多個 ajax 請求 每個請求的執行前、執行後要觸發相同事件 <br>
+    可使用 ajaxStart() ajaxStop() 取代每個請求的 beforeSend 、 complete 函數
+    <br><br>
+
+    <u>
+        //這裏使用 ajaxStart() ajaxStop() 的對象為 $(document)
+    </u>
+
+    <p>
+        一些常見使用 ajax 的網站 都會在請求加載過程中顯示進度條 <br>
+        最簡單的進度條使用方式為下載 NProgress 的 JS、CSS 文件<br>
+        引入後 在 ajaxStart() 方法裡加上一行 NProgress.start() <br>
+        然後在 ajaxStop() 方法裡加上一行 NProgress.stop() 即可
+    </p>
+
+    <h2>介紹因 ajax 請求無法跨域而延伸出的 jsonp</h2>
+
+    默認情況下 兩個不同源地址之間 無法相互發送 ajax 請求<br>
+    但是我們可以使用 jsonp 的方式完成跨域請求<br>
+    jsonp 的原理是 在頁面添加 script 標籤 對不同源地址發起請求<br>
+    讓響應返回 javascript 數據 然後我們在頁面上即可使用此數據
+    <br><br>
+
+    <u>
+        //但是這過程是同步操作模式 所以我們必須使用<b>回調函數</b>才能順利獲取數據
+    </u>
+    
+    <p>
+        本來在 JS 中使用 jsonp 時需要定義每一個 jsonp 的回調函數名稱<br>
+        而在 JQuery 中已經幫我們封裝好 jsonp 的回調函數名了<br>
+        使用時只需要在 $.ajax() 方法中把 dataType 設為 jsonp 即可<br>
+        * 這裏要注意：<i> jsonp 只能發送 GET 請求</i>
+    </p>
+
+    <h2>ajax 跨域共享方法</h2>
+
+    以前兩個不同源地址之間 無法相互發送 ajax 請求 只能通過 jsonp 完成跨域<br>
+    現在 HTML5 中增加了 跨域資源共享(CORS) 讓 ajax 可以輕易實現跨域之間的訪問
+    <br><br>
+
+    <u>
+        //JSONP 只能實現 GET 請求 而 CORS 支援所有類型的請求
+    </u>
+
+    <p>
+        現在若是想要讓所有地址都能對某個響應發送跨域請求 <br>
+        只需再添加個響應頭 <i>Access-Control-Allow-Origin 為 *</i> 即可
+    </p>
+
+</body>
+
+</html>
